@@ -12,11 +12,13 @@ let myStream;
 let muted = false;
 let cameraOff = false;
 let roomName;
+let myPeerConnection;
 
 async function getCameras() {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const cameras = devices.filter((device) => device.kind === "videoinput");
+    // 현재 선택된 카메라를 알려주는 getVideoTracks()함수를 사용
     const currentCamera = myStream.getVideoTracks()[0];
     cameras.forEach((camera) => {
       const option = document.createElement("option");
@@ -32,24 +34,29 @@ async function getCameras() {
   }
 }
 
+// 선택한 카메라의 아이디를 받아서 작업
 async function getMedia(deviceId) {
+  // 카메라의 id를 가지지 않는 설정
   const initialConstrains = {
     audio: true,
+    // 셀카모드
     video: { facingMode: "user" },
   };
+  // 지정한 카메라를 설정(지정한 카메라 id가 있을 때)
   const cameraConstrains = {
     audio: true,
     video: { deviceId: { exact: deviceId } },
   };
   try {
     myStream = await navigator.mediaDevices.getUserMedia(
+      // 지정한 카메라가 있다면 cameraConstrains를 사용
       deviceId ? cameraConstrains : initialConstrains
     );
     myFace.srcObject = myStream;
+    // 가장 처음에 카메를 지정하지 않았을 때만 불러옴, 안그러면 계속 불러와서 option이 중복됨
     if (!deviceId) {
       await getCameras();
     }
-    await getCameras();
   } catch (e) {
     console.log(e);
   }
@@ -81,6 +88,7 @@ function handleCameraClick() {
 }
 
 async function handleCameraChange() {
+  // 선택한 카메라의 id를 넣어줌
   await getMedia(camerasSelect.value);
 }
 
@@ -93,10 +101,11 @@ camerasSelect.addEventListener("input", handleCameraChange);
 const welcome = document.getElementById("welcome");
 const welcomeForm = welcome.querySelector("form");
 
-function startMedia() {
+async function startMedia() {
   welcome.hidden = true;
   call.hidden = false;
-  getMedia();
+  await getMedia();
+  makeConnection();
 }
 
 function handleWelcomeSubmit(event) {
