@@ -120,6 +120,28 @@ welcomeForm.addEventListener("submit", handleWelcomeSubmit);
 
 // socket code
 
-socket.on("welcome", () => {
-  console.log("someone joined");
+// 방을 만든 사람이 방에 참여한 사람에게 보내는 코드
+socket.on("welcome", async () => {
+  // 우리가 누구이며 어디에 있다는 등을 알려주는 초대장
+  const offer = await myPeerConnection.createOffer();
+  myPeerConnection.setLocalDescription(offer);
+  console.log("sent the offer!");
+  socket.emit("offer", offer, roomName);
 });
+
+// 방에 참가한 사람이 받게 되는 코드
+socket.on("offer", (offer) => {
+  console.log(offer);
+});
+
+// RTC code
+
+// 실제 연결을 만드는 함수
+function makeConnection() {
+  // peer-to-peer connection
+  myPeerConnection = new RTCPeerConnection();
+  // video, audio stream을 전송
+  myStream
+    .getTracks()
+    .forEach((track) => myPeerConnection.addTrack(track, myStream));
+}
