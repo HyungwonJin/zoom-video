@@ -134,14 +134,23 @@ socket.on("welcome", async () => {
 
 // 방에 참가한 사람이 받게 되는 코드
 socket.on("offer", async (offer) => {
+  console.log("recived offer");
   myPeerConnection.setRemoteDescription(offer);
   const answer = await myPeerConnection.createAnswer();
   myPeerConnection.setLocalDescription(answer);
+  console.log("send answer");
   socket.emit("answer", answer, roomName);
 });
 
 socket.on("answer", (answer) => {
+  console.log("recived answer");
   myPeerConnection.setRemoteDescription(answer);
+});
+
+// 처음에 참가자가 ice를 받고 다시 돌려보내면 방에 있는 사람들이 ice를 받음
+socket.on("ice", (ice) => {
+  console.log("recived ice:", ice);
+  myPeerConnection.addIceCandidate(ice);
 });
 
 // RTC code
@@ -150,8 +159,23 @@ socket.on("answer", (answer) => {
 function makeConnection() {
   // peer-to-peer connection
   myPeerConnection = new RTCPeerConnection();
+  myPeerConnection.addEventListener("icecandidate", handleIce);
+  myPeerConnection.addEventListener("addstream", handleAddStream);
   // video, audio stream을 전송
   myStream
     .getTracks()
     .forEach((track) => myPeerConnection.addTrack(track, myStream));
+}
+
+// 처음 방에 있는 사람들이 answer를 받으면 ice를 전송함
+// 그리고 참가자가 ice를 받으면 참가자도 ice를 보냄
+function handleIce(data) {
+  console.log("send candidate:", data.candidate);
+  socket.emit("ice", data.candidate, roomName);
+}
+
+function handleAddStream(data) {
+  console.log("fire addStream");
+  const peerFace = document.getElementById("peerFace");
+  peerFace.srcObject = data.stream;
 }
